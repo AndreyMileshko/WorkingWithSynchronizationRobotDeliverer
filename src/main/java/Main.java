@@ -12,6 +12,31 @@ public class Main {
 
 
     public static void main(String[] args) throws InterruptedException {
+        Thread printingThread = new Thread(() -> {
+            while (!Thread.interrupted()) {
+                synchronized (sizeToFreq) {
+                    try {
+                        sizeToFreq.wait();
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                    int maxValue = sizeToFreq.entrySet()
+                            .stream()
+                            .max(Map.Entry.comparingByValue())
+                            .get()
+                            .getValue();
+                    int maxValueKey = sizeToFreq.entrySet()
+                            .stream()
+                            .max(Map.Entry.comparingByValue())
+                            .get()
+                            .getKey();
+                    System.out.printf("Текущий лидер среди частот %d (встретилось %d раз(а))\n",
+                            maxValueKey, maxValue);
+                }
+            }
+        });
+        printingThread.start();
+
         for (int i = 0; i < routeQuantity; i++) {
             Thread thread = new Thread(() -> {
                 String str = generateRoute(originalString, stringLength);
@@ -23,24 +48,15 @@ public class Main {
                     } else {
                         sizeToFreq.put(resultOfTask, firstOccurrence);
                     }
+                    sizeToFreq.notify();
                 }
             });
             thread.start();
             thread.join();
         }
+        printingThread.interrupt();
 
-        int maxValue = sizeToFreq.entrySet()
-                .stream()
-                .max(Map.Entry.comparingByValue())
-                .get()
-                .getValue();
-        int maxValueKey = sizeToFreq.entrySet()
-                .stream()
-                .max(Map.Entry.comparingByValue())
-                .get()
-                .getKey();
-        System.out.printf("Самое частое количество повторений %d (встретилось %d раз(а))\nДругие размеры:\n",
-                maxValueKey, maxValue);
+        System.out.println("Другие размеры: ");
         for (Map.Entry<Integer, Integer> entry : sizeToFreq.entrySet()) {
             Integer key = entry.getKey();
             Integer value = entry.getValue();
