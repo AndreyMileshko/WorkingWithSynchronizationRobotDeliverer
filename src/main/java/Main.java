@@ -1,7 +1,6 @@
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
-import java.util.concurrent.*;
 
 public class Main {
 
@@ -12,25 +11,24 @@ public class Main {
     static final int stringLength = 100;
 
 
-    public static void main(String[] args) throws ExecutionException, InterruptedException {
+    public static void main(String[] args) throws InterruptedException {
         for (int i = 0; i < routeQuantity; i++) {
-            Callable<Integer> callable = () -> {
+            Thread thread = new Thread(() -> {
                 String str = generateRoute(originalString, stringLength);
-                return (int) str.chars().filter(ch -> ch == 'R').count();
-            };
-            ExecutorService threadPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-            Future<Integer> task = threadPool.submit(callable);
-            threadPool.shutdown();
-            Integer resultOfTask = task.get();
-            synchronized (sizeToFreq) {
-                if (sizeToFreq.containsKey(resultOfTask)) {
-                    int value = sizeToFreq.get(resultOfTask) + 1;
-                    sizeToFreq.put(resultOfTask, value);
-                } else {
-                    sizeToFreq.put(resultOfTask, firstOccurrence);
+                int resultOfTask = (int) str.chars().filter(ch -> ch == 'R').count();
+                synchronized (sizeToFreq) {
+                    if (sizeToFreq.containsKey(resultOfTask)) {
+                        int value = sizeToFreq.get(resultOfTask) + 1;
+                        sizeToFreq.put(resultOfTask, value);
+                    } else {
+                        sizeToFreq.put(resultOfTask, firstOccurrence);
+                    }
                 }
-            }
+            });
+            thread.start();
+            thread.join();
         }
+
         int maxValue = sizeToFreq.entrySet()
                 .stream()
                 .max(Map.Entry.comparingByValue())
@@ -49,7 +47,7 @@ public class Main {
             System.out.printf("- %d (%d раз(a))\n", key, value);
         }
     }
-    
+
     public static String generateRoute(String letters, int length) {
         Random random = new Random();
         StringBuilder route = new StringBuilder();
